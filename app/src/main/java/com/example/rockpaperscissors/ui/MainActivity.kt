@@ -1,5 +1,7 @@
 package com.example.rockpaperscissors.ui
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import android.view.Menu
@@ -20,9 +22,11 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
-private lateinit var gameRepository: GameRepository
+lateinit var gameRepository: GameRepository
 
-private val mainScope = CoroutineScope(Dispatchers.Main)
+const val GAME_HISTORY_REQUEST_CODE = 100
+
+val mainScope = CoroutineScope(Dispatchers.Main)
 
 class MainActivity : AppCompatActivity() {
 
@@ -35,9 +39,30 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initViews() {
+        setStatisticsFromDatabase()
         btnRock.setOnClickListener{view -> buildGame(Move.ROCK) }
         btnPaper.setOnClickListener{view -> buildGame(Move.PAPER) }
         btnScissors.setOnClickListener{view -> buildGame(Move.SCISSORS) }
+    }
+
+
+    private fun setStatisticsFromDatabase() {
+        mainScope.launch {
+            var lose = 0
+            var win = 0
+            var draw = 0
+            val games = withContext(Dispatchers.IO) {
+                gameRepository.getAllGames()
+            }
+
+            for (game in games) {
+                if(game.result == GameResult.LOSE) lose++
+                else if(game.result == GameResult.WIN) win++
+                else draw++
+            }
+
+            tvStatistics.setText(getString(R.string.win_lose_draw_statistics, win, draw, lose))
+        }
     }
 
     private fun buildGame(userMove: Move) {
@@ -49,14 +74,11 @@ class MainActivity : AppCompatActivity() {
             withContext(Dispatchers.IO) {
                 gameRepository.insertGame(game)
             }
-            previewGame(game)
+            tvGameResult.text = getString(game.result.stringId)
+            tvComputerMove.foreground = getResources().getDrawable(game.computerMove.image)
+            tvUserMove.foreground = getResources().getDrawable(game.userMove.image)
+            setStatisticsFromDatabase()
         }
-    }
-
-    private fun previewGame(game: Game) {
-        tvGameResult.text = getString(game.result.stringId)
-        tvComputerMove.foreground = getResources().getDrawable(game.computerMove.image)
-        tvUserMove.foreground = getResources().getDrawable(game.userMove.image)
     }
 
     private fun getDate(): String {
@@ -99,8 +121,26 @@ class MainActivity : AppCompatActivity() {
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         return when (item.itemId) {
-            R.id.action_settings -> true
+            R.id.action_game_history -> {
+                startHistoryActivity()
+                true
+            }
             else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    private fun startHistoryActivity() {
+        val intent = Intent(this, HistoryActivity::class.java)
+        startActivityForResult(intent, GAME_HISTORY_REQUEST_CODE)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if(resultCode == Activity.RESULT_OK) {
+            when(requestCode) {
+                GAME_HISTORY_REQUEST_CODE -> {
+                    setStatisticsFromDatabase()
+                }
+            }
         }
     }
 }
