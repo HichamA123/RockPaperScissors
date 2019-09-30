@@ -56,9 +56,11 @@ class MainActivity : AppCompatActivity() {
             }
 
             for (game in games) {
-                if(game.result == GameResult.LOSE) lose++
-                else if(game.result == GameResult.WIN) win++
-                else draw++
+                when(game.result) {
+                    GameResult.LOSE -> lose++
+                    GameResult.WIN -> win++
+                    GameResult.DRAW -> draw++
+                }
             }
 
             tvStatistics.setText(getString(R.string.win_lose_draw_statistics, win, draw, lose))
