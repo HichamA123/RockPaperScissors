@@ -11,9 +11,11 @@ abstract class GameRoomDatabase : RoomDatabase() {
 
     abstract fun gameDao(): GameDao
 
+    //companion object just the same as static in Java (singleton)
     companion object {
         private const val DATABASE_NAME = "GAME_DATABASE"
 
+        //volatile means that the changes that are made to this variable are immediately made visible to other threads
         @Volatile
         private var gameRoomDatabaseInstance: GameRoomDatabase? = null
 
